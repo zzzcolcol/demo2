@@ -21,14 +21,7 @@ pipeline {
         
     stages {
         
-        stage('Setup Environment') {
-            steps {
-                sh '''
-                apt-get update
-                apt-get install -y docker.io awscli
-                '''
-            }
-        }
+
 
         stage('Clone Repository') {
             steps {
