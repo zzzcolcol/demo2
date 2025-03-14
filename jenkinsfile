@@ -1,14 +1,51 @@
 pipeline {
     agent any
-    
+
+    environment {
+        GIT_CREDENTIALS = 'github_token'  // Jenkins에 등록된 GitHub 인증 정보
+        GIT_BRANCH = 'BE'  // 빌드할 Git 브랜치
+        GIT_REPO = 'https://github.com/zzzcolcol/demo2.git'  // GitHub Repository URL
+
+        DOCKER_IMAGE = 'your-registry/demo2'  // DockerHub, ECR, GCR 등 레지스트리 설정
+        K8S_NAMESPACE = 'default'  // Kubernetes 네임스페이스
+        DEPLOYMENT_NAME = 'demo2'  // Kubernetes Deployment 이름
+    }
+
     stages {
-        
-        stage('github-clone') {
+
+        stage('Clone Repository') {
             steps {
-                git branch: 'BE', credentialsId: 'github_token', url: '{REPOSITORY URL}'
+                git branch: GIT_BRANCH, credentialsId: GIT_CREDENTIALS, url: GIT_REPO
             }
         }
-        
-   		// stage...
-   	}
+
+        stage('Build & Test with Gradle') {
+            steps {
+                sh './gradlew clean build -x test'  // Gradle 빌드 (테스트 제외)
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                sh "docker build -t ${DOCKER_IMAGE} ."
+            }
+        }
+
+        stage('Push to Registry') {
+            steps {
+                withDockerRegistry([credentialsId: 'dockerhub-credentials', url: 'https://index.docker.io/v1/']) {
+                    sh "docker push ${DOCKER_IMAGE}"
+                }
+            }
+        }
+
+        stage('Deploy to Kubernetes') {
+            steps {
+                sh """
+                kubectl set image deployment/${DEPLOYMENT_NAME} ${DEPLOYMENT_NAME}=${DOCKER_IMAGE} --namespace=${K8S_NAMESPACE}
+                kubectl rollout status deployment/${DEPLOYMENT_NAME} --namespace=${K8S_NAMESPACE}
+                """
+            }
+        }
+    }
 }
