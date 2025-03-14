@@ -1,11 +1,21 @@
 pipeline {
-        agent {
+    agent {
         kubernetes {
             yaml '''
             apiVersion: v1
             kind: Pod
             spec:
               containers:
+                - name: jnlp
+                  image: jenkins/inbound-agent
+                  args: ["jenkins-agent"]
+                  env:
+                    - name: JENKINS_URL
+                      value: "http://jenkins.jenkins.svc.cluster.local:8080/"
+                  volumeMounts:
+                    - name: workspace-volume
+                      mountPath: /home/jenkins/agent
+                  
                 - name: docker
                   image: docker:20.10.23-dind
                   securityContext:
@@ -15,13 +25,24 @@ pipeline {
                   args:
                     - "--host=unix:///var/run/docker.sock"
                   tty: true
+                  volumeMounts:
+                    - name: docker-sock
+                      mountPath: /var/run/docker.sock
+                
                 - name: aws-cli
                   image: amazon/aws-cli
                   command:
-                    - "sleep"
+                    - "/bin/sh"
                   args:
-                    - "999999"
+                    - "-c"
+                    - "while true; do sleep 3600; done"
                   tty: true
+
+              volumes:
+                - name: workspace-volume
+                  emptyDir: {}
+                - name: docker-sock
+                  emptyDir: {}
             '''
         }
     }
