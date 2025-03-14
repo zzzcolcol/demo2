@@ -3,7 +3,7 @@ pipeline {
 
     environment {
         GIT_CREDENTIALS = 'github_token'  // Jenkins에 등록된 GitHub 인증 정보
-        GIT_BRANCH = 'BE'  // 빌드할 Git 브랜치
+        GIT_BRANCH = 'master'  // 빌드할 Git 브랜치
         GIT_REPO = 'https://github.com/zzzcolcol/demo2.git'  // GitHub Repository URL
 
         DOCKER_IMAGE = 'your-registry/demo2'  // DockerHub, ECR, GCR 등 레지스트리 설정
