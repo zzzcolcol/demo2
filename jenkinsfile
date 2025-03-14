@@ -25,18 +25,9 @@ pipeline {
             '''
         }
     }
-    stages {
-        stage('Wait for Agent') {
-            steps {
-                script {
-                    retry(3) { // 3번까지 재시도
-                        sleep(time: 10, unit: 'SECONDS')
-                        sh 'echo "Checking Agent Availability"'
-                    }
-                }
-            }
-        }
-    }
+
+
+    
 
     environment {
         AWS_ACCOUNT_ID = '120653558546'  // AWS 계정 ID
@@ -54,7 +45,16 @@ pipeline {
 
         
     stages {
-        
+        stage('Wait for Agent') {
+            steps {
+                script {
+                    retry(3) { // 3번까지 재시도
+                        sleep(time: 10, unit: 'SECONDS')
+                        sh 'echo "Checking Agent Availability"'
+                    }
+                }
+            }
+        }
         stage('Clone Repository') {
             steps {
                 checkout([
