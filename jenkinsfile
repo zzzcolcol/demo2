@@ -63,6 +63,8 @@ pipeline {
         DEPLOYMENT_NAME = 'demo2'  // Kubernetes Deployment 
     }
 
+
+        
     stages {
         stage('Setup Environment') {
             steps {
@@ -70,9 +72,6 @@ pipeline {
                 sh 'docker --version'
             }
         }
-    }
-        
-    stages {
         stage('Wait for Agent') {
             steps {
                 script {
@@ -83,6 +82,8 @@ pipeline {
                 }
             }
         }
+
+        
         stage('Clone Repository') {
             steps {
                 checkout([
