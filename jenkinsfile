@@ -15,8 +15,12 @@ pipeline {
         DEPLOYMENT_NAME = 'demo2'  // Kubernetes Deployment 이름
     }
 
-    stages {
 
+
+
+        
+    stages {
+        
         stage('Setup Environment') {
             steps {
                 sh '''
@@ -25,8 +29,6 @@ pipeline {
                 '''
             }
         }
-    }    
-    stages {
 
         stage('Clone Repository') {
             steps {
