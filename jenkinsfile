@@ -21,14 +21,15 @@ pipeline {
                   securityContext:
                     privileged: true
                   command:
-                    - "dockerd-entrypoint.sh"
+                    - "dockerd"
                   args:
                     - "--host=unix:///var/run/docker.sock"
+                    - "--tls=false"
                   tty: true
                   volumeMounts:
                     - name: docker-sock
-                      mountPath: /var/run/docker.sock
-                
+                      mountPath: /var/run
+
                 - name: aws-cli
                   image: amazon/aws-cli
                   command:
@@ -48,8 +49,6 @@ pipeline {
     }
 
 
-    
-
     environment {
         AWS_ACCOUNT_ID = '120653558546'  // AWS 계정 ID
         AWS_REGION = 'ap-northeast-2'  // AWS 리전
@@ -64,6 +63,14 @@ pipeline {
         DEPLOYMENT_NAME = 'demo2'  // Kubernetes Deployment 
     }
 
+    stages {
+        stage('Setup Environment') {
+            steps {
+                sh 'aws --version'
+                sh 'docker --version'
+            }
+        }
+    
         
     stages {
         stage('Wait for Agent') {
