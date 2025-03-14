@@ -70,7 +70,7 @@ pipeline {
                 sh 'docker --version'
             }
         }
-    
+    }
         
     stages {
         stage('Wait for Agent') {
