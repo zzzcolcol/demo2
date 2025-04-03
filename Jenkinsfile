@@ -12,24 +12,32 @@ spec:
       image: gradle:8-jdk17
       command: ['cat']
       tty: true
+      workingDir: /workspace
+      volumeMounts:
+        - name: workspace-volume
+          mountPath: /workspace
+
     - name: kaniko
-      image: gcr.io/kaniko-project/executor:latest
-      args:
-        - --dockerfile=Dockerfile
-        - --context=dir://\$(pwd)
-        - --destination=docker.io/zzzcolcol/demo2:\${BUILD_NUMBER}
-        - --verbosity=info
+      image: gcr.io/kaniko-project/executor:debug
+      tty: true
+      workingDir: /workspace
       volumeMounts:
         - name: kaniko-secret
           mountPath: /kaniko/.docker
+        - name: workspace-volume
+          mountPath: /workspace
+
     - name: kubectl
       image: bitnami/kubectl:1.27
       command: ['cat']
       tty: true
+
   volumes:
     - name: kaniko-secret
       secret:
         secretName: docker-hub-secret
+    - name: workspace-volume
+      emptyDir: {}
 """
         }
     }
@@ -60,8 +68,13 @@ spec:
         stage('Docker Build and Push with Kaniko') {
             steps {
                 container('kaniko') {
-                    echo "Kaniko가 DockerHub로 이미지를 푸시 중입니다..."
-                    // Kaniko는 이미 args로 실행되므로 별도 sh 명령은 필요 없음
+                    sh '''
+                    /kaniko/executor \
+                      --context=dir:///workspace \
+                      --dockerfile=/workspace/Dockerfile \
+                      --destination=docker.io/${DOCKER_IMAGE}:${IMAGE_TAG} \
+                      --verbosity=info
+                    '''
                 }
             }
         }
