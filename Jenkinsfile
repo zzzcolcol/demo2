@@ -16,7 +16,7 @@ spec:
       image: gcr.io/kaniko-project/executor:latest
       args:
         - --dockerfile=Dockerfile
-        - --context=dir://$(pwd)
+        - --context=dir://\\$(pwd)
         - --destination=docker.io/zzzcolcol/demo2:\${BUILD_NUMBER}
       volumeMounts:
         - name: kaniko-secret
