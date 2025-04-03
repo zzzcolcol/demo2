@@ -14,12 +14,8 @@ spec:
       tty: true
     - name: kaniko
       image: gcr.io/kaniko-project/executor:latest
-      command: ["/kaniko/executor"]
-      args:
-        - --dockerfile=Dockerfile
-        - --context=dir:///workspace
-        - --destination=docker.io/zzzcolcol/demo2
-        - --verbosity=info
+      command: ['cat']
+      tty: true
       volumeMounts:
         - name: kaniko-secret
           mountPath: /kaniko/.docker
@@ -58,15 +54,15 @@ spec:
             }
         }
 
-        stage('Tag Image with Kaniko') {
+        stage('Docker Build and Push with Kaniko') {
             steps {
                 container('kaniko') {
                     sh """
-                    /kaniko/executor \
-                      --dockerfile=Dockerfile \
-                      --context=dir://$(pwd) \
-                      --destination=docker.io/${DOCKER_IMAGE}:${IMAGE_TAG} \
-                      --verbosity=info
+                      /kaniko/executor \
+                        --dockerfile=Dockerfile \
+                        --context=dir://\$(pwd) \
+                        --destination=docker.io/${DOCKER_IMAGE}:\${BUILD_NUMBER} \
+                        --verbosity=info
                     """
                 }
             }
