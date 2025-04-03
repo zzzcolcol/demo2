@@ -1,82 +1,51 @@
-pipeline {
-  agent {
-    kubernetes {
-      label 'kaniko-builder'
-      defaultContainer 'jnlp'
-      yaml """
-apiVersion: v1
-kind: Pod
-spec:
-  containers:
-    - name: gradle
-      image: gradle:8-jdk17
-      command: ['cat']
-      tty: true
-    - name: kaniko
-      image: gcr.io/kaniko-project/executor:latest
-      command: ['sleep']
-      args: ['9999']
-      volumeMounts:
-        - name: kaniko-secret
-          mountPath: /kaniko/.docker
-    - name: kubectl
-      image: bitnami/kubectl:1.27
-      command: ['cat']
-      tty: true
-  volumes:
-    - name: kaniko-secret
-      secret:
-        secretName: docker-hub-secret
-"""
-    }
-  }
+def DOCKER_IMAGE_NAME = "zzzcolcol/demo2"
+def IMAGE_TAG = "${env.BUILD_NUMBER}"
+def NAMESPACE = "jenkins"
 
-  environment {
-    DOCKER_IMAGE = "zzzcolcol/demo2"
-    IMAGE_TAG = "${env.BUILD_NUMBER}"
-    NAMESPACE = "jenkins"
-  }
+podTemplate(
+  label: 'kaniko-builder',
+  containers: [
+    containerTemplate(name: 'gradle', image: 'gradle:8-jdk17', command: 'cat', ttyEnabled: true),
+    containerTemplate(name: 'kaniko', image: 'gcr.io/kaniko-project/executor:latest', command: 'cat', ttyEnabled: true),
+    containerTemplate(name: 'kubectl', image: 'bitnami/kubectl:1.27', command: 'cat', ttyEnabled: true)
+  ],
+  volumes: [
+    secretVolume(secretName: 'docker-hub-secret', mountPath: '/kaniko/.docker')
+  ]
+) {
+  node('kaniko-builder') {
 
-  stages {
     stage('Checkout') {
-      steps {
-        container('gradle') {
-          checkout scm
-        }
+      container('gradle') {
+        checkout scm
       }
     }
 
-    stage('Build') {
-      steps {
-        container('gradle') {
-          sh 'gradle clean build -x test'
-        }
+    stage('Build with Gradle') {
+      container('gradle') {
+        sh 'gradle clean build -x test'
       }
     }
 
     stage('Docker Build and Push with Kaniko') {
-      steps {
-        container('kaniko') {
-          sh """
-            /kaniko/executor \
-              --dockerfile=Dockerfile \
-              --context=dir://$(pwd) \
-              --destination=docker.io/${DOCKER_IMAGE}:${IMAGE_TAG} \
-              --verbosity=info
-          """
-        }
+      container('kaniko') {
+        sh '''
+          /kaniko/executor \
+            --dockerfile=Dockerfile \
+            --context=dir://$(pwd) \
+            --destination=docker.io/zzzcolcol/demo2:${BUILD_NUMBER} \
+            --verbosity=info
+        '''
       }
     }
 
     stage('Deploy to EKS') {
-      steps {
-        container('kubectl') {
-          sh """
-            sed -i.bak 's|IMAGE_PLACEHOLDER|docker.io/${DOCKER_IMAGE}:${IMAGE_TAG}|' ./k8s-deployment.yaml
-            kubectl apply -f ./k8s-deployment.yaml -n ${NAMESPACE}
-            kubectl apply -f ./k8s-service.yaml -n ${NAMESPACE}
-          """
-        }
+      container('kubectl') {
+        sh """
+          sed -i.bak 's|IMAGE_PLACEHOLDER|docker.io/${DOCKER_IMAGE_NAME}:${IMAGE_TAG}|' ./k8s-deployment.yaml
+          kubectl apply -f ./k8s-deployment.yaml -n ${NAMESPACE}
+          kubectl apply -f ./k8s-service.yaml -n ${NAMESPACE}
+        """
       }
     }
   }
