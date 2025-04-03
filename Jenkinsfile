@@ -17,7 +17,8 @@ spec:
       args:
         - --dockerfile=Dockerfile
         - --context=dir://\\$(pwd)
-        - --destination=docker.io/zzzcolcol/demo2:\${BUILD_NUMBER}
+        - --destination=docker.io/zzzcolcol/demo2:\\${BUILD_NUMBER}
+        - --verbosity=info
       volumeMounts:
         - name: kaniko-secret
           mountPath: /kaniko/.docker
@@ -59,7 +60,8 @@ spec:
         stage('Docker Build and Push with Kaniko') {
             steps {
                 container('kaniko') {
-                    sh 'echo "Kaniko pushing image to DockerHub..."'
+                    echo "Kaniko가 DockerHub로 이미지를 푸시 중입니다..."
+                    // Kaniko는 args로 실행되기 때문에 별도 sh는 필요 없음
                 }
             }
         }
