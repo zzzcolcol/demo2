@@ -14,10 +14,11 @@ spec:
       tty: true
     - name: kaniko
       image: gcr.io/kaniko-project/executor:latest
+      command: ["/kaniko/executor"]
       args:
         - --dockerfile=Dockerfile
-        - --context=dir://\\$(pwd)
-        - --destination=docker.io/zzzcolcol/demo2:\\${BUILD_NUMBER}
+        - --context=dir:///workspace
+        - --destination=docker.io/zzzcolcol/demo2
         - --verbosity=info
       volumeMounts:
         - name: kaniko-secret
@@ -36,7 +37,7 @@ spec:
 
     environment {
         DOCKER_IMAGE = "zzzcolcol/demo2"
-        IMAGE_TAG = "${env.BUILD_NUMBER}"
+        IMAGE_TAG = "${BUILD_NUMBER}"
         NAMESPACE = "jenkins"
     }
 
@@ -57,11 +58,16 @@ spec:
             }
         }
 
-        stage('Docker Build and Push with Kaniko') {
+        stage('Tag Image with Kaniko') {
             steps {
                 container('kaniko') {
-                    echo "Kaniko가 DockerHub로 이미지를 푸시 중입니다..."
-                    // Kaniko는 args로 실행되기 때문에 별도 sh는 필요 없음
+                    sh """
+                    /kaniko/executor \
+                      --dockerfile=Dockerfile \
+                      --context=dir://$(pwd) \
+                      --destination=docker.io/${DOCKER_IMAGE}:${IMAGE_TAG} \
+                      --verbosity=info
+                    """
                 }
             }
         }
