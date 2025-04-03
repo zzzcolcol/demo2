@@ -8,20 +8,25 @@ apiVersion: v1
 kind: Pod
 spec:
   containers:
-  - name: gradle
-    image: gradle:8-jdk17
-    command: ['cat']
-    tty: true
-  - name: kaniko
-    image: gcr.io/kaniko-project/executor:latest
-    tty: true
-    volumeMounts:
-      - name: kaniko-secret
-        mountPath: /kaniko/.docker
-  - name: kubectl
-    image: bitnami/kubectl:latest
-    command: ['cat']
-    tty: true
+    - name: gradle
+      image: gradle:8-jdk17
+      command: ['cat']
+      tty: true
+    - name: kaniko
+      image: gcr.io/kaniko-project/executor:latest
+      command:
+        - /kaniko/executor
+      args:
+        - --dockerfile=Dockerfile
+        - --context=dir:///workspace
+        - --destination=docker.io/zzzcolcol/demo2:\$(BUILD_NUMBER)
+      volumeMounts:
+        - name: kaniko-secret
+          mountPath: /kaniko/.docker
+    - name: kubectl
+      image: lachlanevenson/k8s-kubectl:v1.27.1
+      command: ['cat']
+      tty: true
   volumes:
     - name: kaniko-secret
       secret:
@@ -31,8 +36,8 @@ spec:
     }
 
     environment {
-        DOCKER_IMAGE = "zzzcolcol/demo2"         // 🔁 DockerHub 이미지 이름 (zzzcolcol 계정 기준)
-        IMAGE_TAG = "${env.BUILD_NUMBER}"        // Jenkins 빌드 번호 태그
+        DOCKER_IMAGE = "zzzcolcol/demo2"         // DockerHub 이미지 경로
+        IMAGE_TAG = "${env.BUILD_NUMBER}"        // 이미지 태그
         NAMESPACE = "jenkins"                    // EKS 네임스페이스
     }
 
@@ -56,12 +61,12 @@ spec:
         stage('Docker Build & Push') {
             steps {
                 container('kaniko') {
-                    sh """
+                    sh '''
                     /kaniko/executor \
                       --dockerfile=Dockerfile \
                       --context=dir://$(pwd) \
-                      --destination=docker.io/${DOCKER_IMAGE}:${IMAGE_TAG}
-                    """
+                      --destination=docker.io/zzzcolcol/demo2:$BUILD_NUMBER
+                    '''
                 }
             }
         }
@@ -69,11 +74,11 @@ spec:
         stage('Deploy to EKS') {
             steps {
                 container('kubectl') {
-                    sh """
-                    sed -i.bak 's|IMAGE_PLACEHOLDER|docker.io/${DOCKER_IMAGE}:${IMAGE_TAG}|' ./k8s-deployment.yaml
-                    kubectl apply -f ./k8s-deployment.yaml -n ${NAMESPACE}
-                    kubectl apply -f ./k8s-service.yaml -n ${NAMESPACE}
-                    """
+                    sh '''
+                    sed -i.bak 's|IMAGE_PLACEHOLDER|docker.io/zzzcolcol/demo2:$BUILD_NUMBER|' ./k8s-deployment.yaml
+                    kubectl apply -f ./k8s-deployment.yaml -n jenkins
+                    kubectl apply -f ./k8s-service.yaml -n jenkins
+                    '''
                 }
             }
         }
