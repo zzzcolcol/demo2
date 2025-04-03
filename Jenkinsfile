@@ -3,7 +3,7 @@ pipeline {
         kubernetes {
             label 'kaniko-builder'
             defaultContainer 'jnlp'
-            yaml '''
+            yaml """
 apiVersion: v1
 kind: Pod
 spec:
@@ -16,8 +16,8 @@ spec:
       image: gcr.io/kaniko-project/executor:latest
       args:
         - --dockerfile=Dockerfile
-        - --context=dir://$(pwd)
-        - --destination=docker.io/zzzcolcol/demo2:${BUILD_NUMBER}
+        - --context=dir://\$(pwd)
+        - --destination=docker.io/zzzcolcol/demo2:\${BUILD_NUMBER}
         - --verbosity=info
       volumeMounts:
         - name: kaniko-secret
@@ -30,7 +30,7 @@ spec:
     - name: kaniko-secret
       secret:
         secretName: docker-hub-secret
-'''
+"""
         }
     }
 
@@ -61,6 +61,7 @@ spec:
             steps {
                 container('kaniko') {
                     echo "Kaniko가 DockerHub로 이미지를 푸시 중입니다..."
+                    // Kaniko는 이미 args로 실행되므로 별도 sh 명령은 필요 없음
                 }
             }
         }
