@@ -14,17 +14,15 @@ spec:
       tty: true
     - name: kaniko
       image: gcr.io/kaniko-project/executor:latest
-      command:
-        - /kaniko/executor
       args:
         - --dockerfile=Dockerfile
-        - --context=dir:///workspace
-        - --destination=docker.io/zzzcolcol/demo2:\$(BUILD_NUMBER)
+        - --context=dir://$(pwd)
+        - --destination=docker.io/zzzcolcol/demo2:\${BUILD_NUMBER}
       volumeMounts:
         - name: kaniko-secret
           mountPath: /kaniko/.docker
     - name: kubectl
-      image: lachlanevenson/k8s-kubectl:v1.27.1
+      image: bitnami/kubectl:1.27
       command: ['cat']
       tty: true
   volumes:
@@ -36,9 +34,9 @@ spec:
     }
 
     environment {
-        DOCKER_IMAGE = "zzzcolcol/demo2"         // DockerHub 이미지 경로
-        IMAGE_TAG = "${env.BUILD_NUMBER}"        // 이미지 태그
-        NAMESPACE = "jenkins"                    // EKS 네임스페이스
+        DOCKER_IMAGE = "zzzcolcol/demo2"
+        IMAGE_TAG = "${env.BUILD_NUMBER}"
+        NAMESPACE = "jenkins"
     }
 
     stages {
@@ -58,15 +56,10 @@ spec:
             }
         }
 
-        stage('Docker Build & Push') {
+        stage('Docker Build and Push with Kaniko') {
             steps {
                 container('kaniko') {
-                    sh '''
-                    /kaniko/executor \
-                      --dockerfile=Dockerfile \
-                      --context=dir://$(pwd) \
-                      --destination=docker.io/zzzcolcol/demo2:$BUILD_NUMBER
-                    '''
+                    sh 'echo "Kaniko pushing image to DockerHub..."'
                 }
             }
         }
@@ -74,11 +67,11 @@ spec:
         stage('Deploy to EKS') {
             steps {
                 container('kubectl') {
-                    sh '''
-                    sed -i.bak 's|IMAGE_PLACEHOLDER|docker.io/zzzcolcol/demo2:$BUILD_NUMBER|' ./k8s-deployment.yaml
-                    kubectl apply -f ./k8s-deployment.yaml -n jenkins
-                    kubectl apply -f ./k8s-service.yaml -n jenkins
-                    '''
+                    sh """
+                    sed -i.bak 's|IMAGE_PLACEHOLDER|docker.io/${DOCKER_IMAGE}:${IMAGE_TAG}|' ./k8s-deployment.yaml
+                    kubectl apply -f ./k8s-deployment.yaml -n ${NAMESPACE}
+                    kubectl apply -f ./k8s-service.yaml -n ${NAMESPACE}
+                    """
                 }
             }
         }
