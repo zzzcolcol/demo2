@@ -61,7 +61,6 @@ spec:
             steps {
                 container('kaniko') {
                     echo "Kaniko가 DockerHub로 이미지를 푸시 중입니다..."
-                    // 실행은 args에서 이미 처리됨
                 }
             }
         }
