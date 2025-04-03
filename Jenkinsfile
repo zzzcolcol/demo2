@@ -22,6 +22,10 @@ spec:
     volumeMounts:
       - name: kaniko-secret
         mountPath: /kaniko/.docker
+  - name: kubectl
+    image: bitnami/kubectl:latest
+    command: ['cat']
+    tty: true
   volumes:
     - name: kaniko-secret
       secret:
@@ -56,12 +60,12 @@ spec:
         stage('Build and Push Docker Image') {
             steps {
                 container('kaniko') {
-                    sh """
+                    sh '''
                     /kaniko/executor \
                       --dockerfile=Dockerfile \
                       --context=dir://$(pwd) \
-                      --destination=docker.io/${DOCKER_IMAGE}:${IMAGE_TAG}
-                    """
+                      --destination=docker.io/zzzcolcol/demo2:${BUILD_NUMBER}
+                    '''
                 }
             }
         }
@@ -69,11 +73,11 @@ spec:
         stage('Deploy to EKS') {
             steps {
                 container('kubectl') {
-                    sh """
-                    sed -i.bak 's|IMAGE_PLACEHOLDER|docker.io/${DOCKER_IMAGE}:${IMAGE_TAG}|' ./k8s-deployment.yaml
-                    kubectl apply -f ./k8s-deployment.yaml -n ${NAMESPACE}
-                    kubectl apply -f ./k8s-service.yaml -n ${NAMESPACE}
-                    """
+                    sh '''
+                    sed -i.bak 's|IMAGE_PLACEHOLDER|docker.io/zzzcolcol/demo2:${BUILD_NUMBER}|' ./k8s-deployment.yaml
+                    kubectl apply -f ./k8s-deployment.yaml -n jenkins
+                    kubectl apply -f ./k8s-service.yaml -n jenkins
+                    '''
                 }
             }
         }
