@@ -36,7 +36,8 @@ pipeline{
                     git url: 'https://github.com/zzzcolcol/demo2.git',
                     branch: 'master',
                     credentialsId: "github-token"
-                    
+                    sh 'ls -al build/libs'
+                    sh 'mv $(find build/libs -name "*.jar" | head -n 1) ./app.jar'
                     sh 'gradle bootJar'
                     sh 'ls -al'
                     sh 'mv ./build/libs/xxx.jar ./'
