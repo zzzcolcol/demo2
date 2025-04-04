@@ -7,7 +7,7 @@ pipeline{
                spec:
                  containers:
                  - name: gradle
-                   image: gradle
+                   image: gradle:8.6.0-jdk17
                    command: ['sleep']
                    args: ['infinity']
                  - name: kaniko
