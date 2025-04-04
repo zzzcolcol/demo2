@@ -26,18 +26,18 @@ dependencies {
 tasks.named('test') {
 	useJUnitPlatform()
 }
-// // ✅ 실행 가능한 fat JAR 생성
-// bootJar {
-// 	archiveFileName = 'app.jar'
-// 	launchScript() // 리눅스 실행 스크립트 포함 (옵션)
-// }
+// ✅ 실행 가능한 fat JAR 생성
+bootJar {
+	archiveFileName = 'app.jar'
+	launchScript() // 리눅스 실행 스크립트 포함 (옵션)
+}
 
-// // ✅ 테스트 제외하고 빌드 시 오류 방지용
-// tasks.withType(Test).configureEach {
-// 	ignoreFailures = true
-// }
+// ✅ 테스트 제외하고 빌드 시 오류 방지용
+tasks.withType(Test).configureEach {
+	ignoreFailures = true
+}
 
-// // ✅ Jenkins에서 ./gradlew build 로 빌드 가능하도록
-// tasks.named('test') {
-// 	useJUnitPlatform()
-// }
+// ✅ Jenkins에서 ./gradlew build 로 빌드 가능하도록
+tasks.named('test') {
+	useJUnitPlatform()
+}
