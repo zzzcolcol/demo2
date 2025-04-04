@@ -41,7 +41,7 @@ pipeline{
                     sh 'mv $(find build/libs -name "*.jar" | head -n 1) ./app.jar'
                     sh 'gradle bootJar'
                     sh 'ls -al'
-                    sh 'mv ./build/libs/xxx.jar ./'
+                    sh 'mv ./build/libs/app.jar ./'
                 }
             }
         }
