@@ -1,77 +1,60 @@
-pipeline {
+pipeline{
     agent {
-        kubernetes {
-            label 'kaniko-builder'
-            defaultContainer 'jnlp'
-            yaml """
-apiVersion: v1
-kind: Pod
-spec:
-  containers:
-    - name: gradle
-      image: gradle:8-jdk17
-      command: ["cat"]
-      tty: true
-    - name: kaniko
-      image: gcr.io/kaniko-project/executor:latest
-      args:
-        - --dockerfile=Dockerfile
-        - --context=dir://workspace
-        - --destination=docker.io/zzzcolcol/demo2:\${BUILD_NUMBER}
-        - --verbosity=info
-      volumeMounts:
-        - name: kaniko-secret
-          mountPath: /kaniko/.docker
-    - name: kubectl
-      image: bitnami/kubectl:1.27
-      command: ["cat"]
-      tty: true
-  volumes:
-    - name: kaniko-secret
-      secret:
-        secretName: docker-hub-secret
-"""
+        kubernetes{
+            yaml '''
+               apiVersoin: v1
+               kind: Pod
+               spec:
+                 containers:
+                 - name: gradle
+                   image: gradle
+                   command: ['sleep']
+                   args: ['infinity']
+                 - name: kaniko
+                   image: gcr.io/kaniko-project/executor:debug
+                   command:
+                   - sleep
+                   args:
+                   - infinity
+                   volumeMounts:
+                     - name: registry-credentials
+                       mountPath: /kaniko/.docker
+                 volumes:
+                 - name: registry-credentials
+                   secret:
+                     secretName: my-reg
+                     items:
+                     - key: .dockerconfigjson
+                       path: config.json
+            '''
         }
     }
-
-    environment {
-        DOCKER_IMAGE = "zzzcolcol/demo2"
-        IMAGE_TAG = "${env.BUILD_NUMBER}"
-        NAMESPACE = "jenkins"
-    }
-
-    stages {
-        stage('Checkout') {
-            steps {
-                container('gradle') {
-                    checkout scm
+    stages{
+        stage('gradle'){
+            steps{
+                container('gradle'){
+                    git url: 'https://github.com/zzzcolcol/demo2.git',
+                    branch: 'master',
+                    credentialsId: "github-token"
+                    
+                    sh 'gradle bootJar'
+                    sh 'ls -al'
+                    sh 'mv ./build/libs/xxx.jar ./'
                 }
             }
         }
-
-        stage('Build') {
-            steps {
-                container('gradle') {
-                    sh 'gradle clean build -x test'
+        stage('docker'){
+            steps{
+                container('kaniko'){
+                    sh "executor --dockerfile=Dockerfile --context=dir://${env.WORKSPACE} --destination=120653558546.dkr.ecr.ap-northeast-2.amazonaws.com/zzzcolcol/test:latest"
                 }
             }
-        }
-
-        stage('Docker Build and Push with Kaniko') {
-            steps {
-                echo "Kaniko 컨테이너가 자동으로 이미지를 푸시 중입니다..."
-                // ❗ Kaniko는 args로 동작, 여기선 sh 안 씀
-            }
-        }
-
-        stage('Deploy to EKS') {
-            steps {
-                container('kubectl') {
-                    sh """
-                    sed -i.bak 's|IMAGE_PLACEHOLDER|docker.io/${DOCKER_IMAGE}:${IMAGE_TAG}|' ./k8s-deployment.yaml
-                    kubectl apply -f ./k8s-deployment.yaml -n ${NAMESPACE}
-                    kubectl apply -f ./k8s-service.yaml -n ${NAMESPACE}
-                    """
+            post{
+                success{
+                    echo 'success Build & Push'
+                }
+                failure{
+                    echo 'failure Build & Push'
                 }
             }
         }
