@@ -48,7 +48,7 @@ pipeline{
         stage('docker'){
             steps{
                 container('kaniko'){
-                    sh "executor --dockerfile=Dockerfile --context=dir://${env.WORKSPACE} --destination=120653558546.dkr.ecr.ap-northeast-2.amazonaws.com/zzzcolcol/test:latest"
+                    sh "executor --dockerfile=Dockerfile --context=dir://${env.WORKSPACE} --destination=120653558546.dkr.ecr.ap-south-1.amazonaws.com/my-app:latest"
                 }
             }
             post{
