@@ -29,6 +29,10 @@ spec:
     }
   }
 
+  environment {
+    ECR_REPO = '120653558546.dkr.ecr.ap-south-1.amazonaws.com/my-app'
+  }
+
   stages {
     stage('Gradle Build') {
       steps {
@@ -46,14 +50,22 @@ spec:
     stage('Docker Build & Push') {
       steps {
         container('kaniko') {
-          sh '''
-            /kaniko/executor \
-              --dockerfile=Dockerfile \
-              --context=dir://${WORKSPACE} \
-              --destination=120653558546.dkr.ecr.ap-south-1.amazonaws.com/my-app:latest \
-              --insecure \
-              --skip-tls-verify
-          '''
+          script {
+            def gitTag = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
+            def imageTag = "v-${gitTag}"
+            def fullImage = "${env.ECR_REPO}:${imageTag}"
+
+            echo "🔨 Building & Pushing Image: ${fullImage}"
+
+            sh """
+              /kaniko/executor \
+                --dockerfile=Dockerfile \
+                --context=dir://${WORKSPACE} \
+                --destination=${fullImage} \
+                --insecure \
+                --skip-tls-verify
+            """
+          }
         }
       }
       post {
