@@ -37,10 +37,19 @@ spec:
     stage('Gradle Build') {
       steps {
         container('gradle') {
+          // Git clone
           git url: 'https://github.com/zzzcolcol/demo2.git',
               branch: 'master',
               credentialsId: "github-token"
 
+          // Git SHA 및 태그 설정
+          script {
+            def gitSha = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
+            env.IMAGE_TAG = "v-${gitSha}"
+            env.IMAGE_FULL = "${env.ECR_REPO}:${env.IMAGE_TAG}"
+          }
+
+          // Gradle 빌드 및 JAR 파일 생성
           sh 'gradle clean bootJar -x test'
           sh 'mv $(find build/libs -name "*.jar" | head -n 1) ./app.jar'
         }
@@ -50,30 +59,23 @@ spec:
     stage('Docker Build & Push') {
       steps {
         container('kaniko') {
-          script {
-            def gitTag = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
-            def imageTag = "v-${gitTag}"
-            def fullImage = "${env.ECR_REPO}:${imageTag}"
-
-            echo "🔨 Building & Pushing Image: ${fullImage}"
-
-            sh """
-              /kaniko/executor \
-                --dockerfile=Dockerfile \
-                --context=dir://${WORKSPACE} \
-                --destination=${fullImage} \
-                --insecure \
-                --skip-tls-verify
-            """
-          }
+          echo "🔨 Building & Pushing: ${env.IMAGE_FULL}"
+          sh """
+            /kaniko/executor \
+              --dockerfile=Dockerfile \
+              --context=dir://${WORKSPACE} \
+              --destination=${env.IMAGE_FULL} \
+              --insecure \
+              --skip-tls-verify
+          """
         }
       }
       post {
         success {
-          echo '✅ SUCCESS: Build & Push 완료!'
+          echo "✅ SUCCESS: Image pushed -> ${env.IMAGE_FULL}"
         }
         failure {
-          echo '❌ FAILURE: Build & Push 실패'
+          echo '❌ FAILURE: Docker Build & Push 실패'
         }
       }
     }
