@@ -37,19 +37,22 @@ spec:
     stage('Gradle Build') {
       steps {
         container('gradle') {
-          // Git clone
+          // Git clone (주의: credentialsId는 Jenkins에 등록된 GitHub token ID여야 함)
           git url: 'https://github.com/zzzcolcol/demo2.git',
               branch: 'master',
-              credentialsId: "github-token"
+              credentialsId: "test"
 
-          // Git SHA 및 태그 설정
           script {
+            // ✅ Git ownership 오류 방지
+            sh 'git config --global --add safe.directory "${WORKSPACE}"'
+
+            // ✅ Git SHA 기반 태그 생성
             def gitSha = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
             env.IMAGE_TAG = "v-${gitSha}"
             env.IMAGE_FULL = "${env.ECR_REPO}:${env.IMAGE_TAG}"
           }
 
-          // Gradle 빌드 및 JAR 파일 생성
+          // Gradle 빌드
           sh 'gradle clean bootJar -x test'
           sh 'mv $(find build/libs -name "*.jar" | head -n 1) ./app.jar'
         }
