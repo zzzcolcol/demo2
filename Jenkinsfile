@@ -14,6 +14,9 @@ spec:
     image: gcr.io/kaniko-project/executor:debug
     command: ["sleep"]
     args: ["infinity"]
+    env:
+    - name: AWS_REGION
+      value: ap-south-1
     volumeMounts:
     - name: registry-credentials
       mountPath: /kaniko/.docker
