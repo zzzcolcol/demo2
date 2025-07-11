@@ -23,6 +23,12 @@ dependencies {
 
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+	implementation 'io.opentelemetry:opentelemetry-api:1.28.0'
+implementation 'io.opentelemetry:opentelemetry-sdk:1.28.0'
+// Exporter
+implementation 'io.opentelemetry:opentelemetry-exporter-otlp:1.28.0'
+
+
 }
 
 tasks.named('test') {
@@ -43,3 +49,5 @@ tasks.withType(Test).configureEach {
 tasks.named('test') {
 	useJUnitPlatform()
 }
+
+
