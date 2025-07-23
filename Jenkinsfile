@@ -5,7 +5,6 @@ pipeline {
 apiVersion: v1
 kind: Pod
 spec:
-  # ✅ 'aws-cli' 컨테이너를 추가하여 AWS 관련 명령어를 전담시킵니다.
   containers:
   - name: gradle
     image: gradle:8.6.0-jdk17
@@ -15,16 +14,28 @@ spec:
     image: gcr.io/kaniko-project/executor:debug
     command: ["sleep"]
     args: ["infinity"]
+    # 👇 2. kaniko 컨테이너에 공유 볼륨을 마운트합니다.
+    # Kaniko가 기본적으로 config.json을 찾는 경로입니다.
+    volumeMounts:
+    - name: kaniko-docker-config
+      mountPath: /kaniko/.docker
   - name: aws-cli
     image: amazon/aws-cli:latest
     command: ["sleep"]
     args: ["infinity"]
+    # 👇 1. aws-cli 컨테이너에 공유 볼륨을 마운트합니다.
+    volumeMounts:
+    - name: kaniko-docker-config
+      mountPath: /shared-config
+  # ✅ Pod 내에서 컨테이너들이 공유할 수 있는 임시 볼륨을 정의합니다.
+  volumes:
+  - name: kaniko-docker-config
+    emptyDir: {}
             '''
         }
     }
 
     environment {
-        // ✅ 파이프라인 전역에서 사용할 수 있도록 환경 변수를 이곳에 정의합니다.
         AWS_REGION = 'ap-south-1'
         ECR_REPO = "120653558546.dkr.ecr.${AWS_REGION}.amazonaws.com/my-app"
     }
@@ -35,7 +46,7 @@ spec:
                 container('gradle') {
                     git url: 'https://github.com/zzzcolcol/demo2.git',
                         branch: 'master',
-                        credentialsId: "test" // 👈 실제 GitHub Credentials ID로 변경
+                        credentialsId: "test"
 
                     script {
                         sh 'git config --global --add safe.directory "${WORKSPACE}"'
@@ -53,43 +64,39 @@ spec:
         stage('Docker Build & Push') {
             steps {
                 script {
-                    // ✅ 1. 'aws-cli' 컨테이너에서 ECR 인증 토큰을 생성합니다.
                     container('aws-cli') {
-                        // 'withAWS'를 사용하여 AWS 자격 증명을 이 컨테이너에 주입합니다.
-                        withAWS(credentials: 'test1', region: env.AWS_REGION) { // 👈 실제 AWS Credentials ID로 변경
+                        withAWS(credentials: 'test1', region: env.AWS_REGION) { // 👈 실제 ID로 변경했는지 확인
                             echo "🔄 Getting a fresh ECR authentication token..."
                             def ecrToken = sh(script: "aws ecr get-login-password --region ${env.AWS_REGION}", returnStdout: true).trim()
                             def ecrRegistry = "https://120653558546.dkr.ecr.${env.AWS_REGION}.amazonaws.com"
 
-                            echo "🔑 Creating Kaniko config.json in shared workspace..."
-                            // ✅ Kaniko가 접근할 수 있도록 공유 워크스페이스에 config.json 파일을 생성합니다.
+                            echo "🔑 Creating config.json in shared volume..."
+                            // 👇 3. 공유 볼륨 경로에 config.json 파일을 생성합니다.
                             writeFile(
-                                file: 'kaniko-config.json',
+                                file: '/shared-config/config.json',
                                 text: """{ "auths": { "${ecrRegistry}": { "username": "AWS", "password": "${ecrToken}" } } }"""
                             )
                         }
                     }
 
-                    // ✅ 2. 'kaniko' 컨테이너에서 이미지를 빌드하고 푸시합니다.
                     container('kaniko') {
-                        echo "🔨 Building & Pushing: ${env.IMAGE_FULL}"
-                        // '--docker-config' 플래그를 사용하여 생성된 인증 파일의 위치를 알려줍니다.
+                        // 4. kaniko 컨테이너는 공유 볼륨을 통해 자동으로 config.json을 인식합니다.
+                        echo "🔨 Building & Pushing: ${env.IMAGE_FULL} AND ${env.ECR_REPO}:latest"
+                        
+                        // 👇 5. 잘못된 플래그(--docker-config, --custom-dir)를 완전히 제거합니다.
                         sh """
                         /kaniko/executor \\
                            --dockerfile=Dockerfile \\
                            --context=dir://${WORKSPACE} \\
                            --destination=${env.IMAGE_FULL} \\
-                           --destination=${env.ECR_REPO}:latest \\
-                           --docker-config=dir://${WORKSPACE} \\
-                           --custom-dir=kaniko-config.json
+                           --destination=${env.ECR_REPO}:latest
                         """
-                         // --insecure, --skip-tls-verify 플래그는 제거하는 것을 권장합니다.
                     }
                 }
             }
             post {
                 success {
-                    echo "✅ SUCCESS: Image pushed -> ${env.IMAGE_FULL}"
+                    echo "✅ SUCCESS: Image pushed -> ${env.IMAGE_FULL}, ${env.ECR_REPO}:latest"
                 }
                 failure {
                     echo '❌ FAILURE: Docker Build & Push 실패'
