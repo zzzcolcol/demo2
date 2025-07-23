@@ -60,36 +60,44 @@ spec:
                 }
             }
         }
-
         stage('Docker Build & Push') {
             steps {
                 script {
                     container('aws-cli') {
-                        withAWS(credentials: 'test1', region: env.AWS_REGION) { // 👈 실제 ID로 변경했는지 확인
-                            echo "🔄 Getting a fresh ECR authentication token..."
-                            def ecrToken = sh(script: "aws ecr get-login-password --region ${env.AWS_REGION}", returnStdout: true).trim()
-                            def ecrRegistry = "https://120653558546.dkr.ecr.${env.AWS_REGION}.amazonaws.com"
-
-                            echo "🔑 Creating config.json in shared volume..."
-                            // 👇 3. 공유 볼륨 경로에 config.json 파일을 생성합니다.
-                            writeFile(
-                                file: '/shared-config/config.json',
-                                text: """{ "auths": { "${ecrRegistry}": { "username": "AWS", "password": "${ecrToken}" } } }"""
-                            )
+                        withAWS(credentials: 'test1', region: env.AWS_REGION) {
+                            echo "🔄 Getting a fresh ECR authentication token and writing config..."
+                            
+                            // 👇 writeFile 대신 sh 명령어로 직접 파일을 생성합니다.
+                            // 이 스크립트 전체가 aws-cli 컨테이너 안에서 실행됩니다.
+                            sh """
+                            # 1. ECR 토큰을 쉘 변수에 저장합니다.
+                            TOKEN=\$(aws ecr get-login-password --region ${env.AWS_REGION})
+                            ECR_REGISTRY="https://120653558546.dkr.ecr.${env.AWS_REGION}.amazonaws.com"
+                            
+                            # 2. echo와 heredoc(EOF)을 사용해 공유 볼륨에 config.json 파일을 직접 씁니다.
+                            echo "Writing config to /shared-config/config.json"
+                            cat > /shared-config/config.json <<EOF
+                            {
+                              "auths": {
+                                "\${ECR_REGISTRY}": {
+                                  "username": "AWS",
+                                  "password": "\${TOKEN}"
+                                }
+                              }
+                            }
+                            EOF
+                            """
                         }
                     }
 
                     container('kaniko') {
-                        // 4. kaniko 컨테이너는 공유 볼륨을 통해 자동으로 config.json을 인식합니다.
-                        echo "🔨 Building & Pushing: ${env.IMAGE_FULL} AND ${env.ECR_REPO}:latest"
-                        
-                        // 👇 5. 잘못된 플래그(--docker-config, --custom-dir)를 완전히 제거합니다.
+                        echo "🔨 Building & Pushing image..."
                         sh """
                         /kaniko/executor \\
-                           --dockerfile=Dockerfile \\
-                           --context=dir://${WORKSPACE} \\
-                           --destination=${env.IMAGE_FULL} \\
-                           --destination=${env.ECR_REPO}:latest
+                          --dockerfile=Dockerfile \\
+                          --context=dir://${WORKSPACE} \\
+                          --destination=${env.IMAGE_FULL} \\
+                          --destination=${env.ECR_REPO}:latest
                         """
                     }
                 }
@@ -104,4 +112,6 @@ spec:
             }
         }
     }
+  
 }
+
