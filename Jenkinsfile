@@ -71,6 +71,7 @@ spec:
               --dockerfile=Dockerfile \
               --context=dir://${WORKSPACE} \
               --destination=${env.IMAGE_FULL} \
+              --destination=${env.ECR_REPO}:latest \
               --insecure \
               --skip-tls-verify
           """
