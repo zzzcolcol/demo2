@@ -56,7 +56,7 @@ spec:
                     // ✅ 1. 'aws-cli' 컨테이너에서 ECR 인증 토큰을 생성합니다.
                     container('aws-cli') {
                         // 'withAWS'를 사용하여 AWS 자격 증명을 이 컨테이너에 주입합니다.
-                        withAWS(credentials: 'your-jenkins-aws-credentials-id', region: env.AWS_REGION) { // 👈 실제 AWS Credentials ID로 변경
+                        withAWS(credentials: 'test', region: env.AWS_REGION) { // 👈 실제 AWS Credentials ID로 변경
                             echo "🔄 Getting a fresh ECR authentication token..."
                             def ecrToken = sh(script: "aws ecr get-login-password --region ${env.AWS_REGION}", returnStdout: true).trim()
                             def ecrRegistry = "https://120653558546.dkr.ecr.${env.AWS_REGION}.amazonaws.com"
