@@ -59,7 +59,7 @@ spec:
                     // ✅ script 블록으로 감싸서 Groovy 변수와 쉘 스크립트를 함께 사용합니다.
                     script {
                         // ✅ withAWS를 사용하여 안전하게 AWS 자격 증명을 주입합니다.
-                        withAWS(credentials: 'your-jenkins-aws-credentials-id', region: env.AWS_REGION) { // 👈 실제 AWS Credentials ID로 변경하세요.
+                        withAWS(credentials: 'test', region: env.AWS_REGION) { // 👈 실제 AWS Credentials ID로 변경하세요.
 
                             echo "🔄 Getting a fresh ECR authentication token..."
                             // 1. 파이프라인 실행 시점에 새로운 ECR 인증 토큰을 동적으로 가져옵니다.
