@@ -17,22 +17,14 @@ repositories {
 	mavenCentral()
 }
 
-dependencyManagement {
-	imports {
-		// BOM 설정: OpenTelemetry 버전 통일
-		mavenBom "io.opentelemetry:opentelemetry-bom:1.28.0"
-	}
-}
+
 
 dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-web'
 	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.5.0'
 
-	// ✅ OpenTelemetry - BOM 적용 덕분에 버전 생략 가능
-	implementation 'io.opentelemetry:opentelemetry-api'
-	implementation 'io.opentelemetry:opentelemetry-sdk'
-	implementation 'io.opentelemetry:opentelemetry-exporter-otlp'
-	implementation 'io.opentelemetry:opentelemetry-semconv:1.28.0-alpha'
+
+
 
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
