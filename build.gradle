@@ -17,28 +17,19 @@ repositories {
 	mavenCentral()
 }
 
-
-
 dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-web'
 	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.5.0'
 
-
-
-
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
-	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
 tasks.named('test') {
 	useJUnitPlatform()
+	ignoreFailures = true // ✅ 하나로 병합 가능
 }
 
 bootJar {
 	archiveFileName = 'app.jar'
 	launchScript()
-}
-
-tasks.withType(Test).configureEach {
-	ignoreFailures = true
 }
