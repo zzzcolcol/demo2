@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.*;
 public class DemoApplication {
 
     public static void main(String[] args) {
-        SpringApplication.run(DemoApplication.class, args); // ⛔️ initOpenTelemetry() 제거
+        SpringApplication.run(DemoApplication.class, args); 
     }
 
     @RestController
