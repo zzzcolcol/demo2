@@ -5,6 +5,8 @@ pipeline {
 apiVersion: v1
 kind: Pod
 spec:
+  # ✅ 1. Pod Identity(IRSA)와 연결된 서비스 계정을 지정합니다.
+  serviceAccountName: jenkins-agent 
   containers:
   - name: gradle
     image: gradle:8.6.0-jdk17
@@ -14,20 +16,8 @@ spec:
     image: gcr.io/kaniko-project/executor:debug
     command: ["sleep"]
     args: ["infinity"]
-    volumeMounts:
-    - name: kaniko-docker-config
-      mountPath: /kaniko/.docker
-  - name: aws-cli
-    image: amazon/aws-cli:latest
-    command: ["sleep"]
-    args: ["infinity"]
-    volumeMounts:
-    - name: kaniko-docker-config
-      mountPath: /shared-config
-  volumes:
-  - name: kaniko-docker-config
-    emptyDir: {}
-            '''
+# ❌ 2. aws-cli 컨테이너와 공유 볼륨이 더 이상 필요 없으므로 제거했습니다.
+'''
         }
     }
 
@@ -56,48 +46,22 @@ spec:
                 }
             }
         }
+        
+        // ✅ 3. Docker Build & Push 단계를 대폭 간소화했습니다.
         stage('Docker Build & Push') {
             steps {
-                script {
-                    container('aws-cli') {
-                        withAWS(credentials: 'test1', region: env.AWS_REGION) {
-                            echo "🔄 Getting a fresh ECR authentication token and writing config..."
-                            
-                            sh """
-                            # 1. ECR 토큰을 쉘 변수에 저장합니다.
-                            TOKEN=\$(aws ecr get-login-password --region ${env.AWS_REGION})
-                            ECR_REGISTRY="https://120653558546.dkr.ecr.${env.AWS_REGION}.amazonaws.com"
-                            
-                            # 2. echo와 heredoc(EOF)을 사용해 공유 볼륨에 config.json 파일을 직접 씁니다.
-                            echo "Writing config to /shared-config/config.json"
-                            cat > /shared-config/config.json <<EOF
-                            {
-                              "auths": {
-                                "\${ECR_REGISTRY}": {
-                                  "username": "AWS",
-                                  "password": "\${TOKEN}"
-                                }
-                              }
-                            }
-                            EOF
-                            """
-                        }
-                    }
-
-                    container('kaniko') {
-                        echo "🔨 Building & Pushing image..."
-                        sh """
-                        /kaniko/executor \\
-                          --dockerfile=Dockerfile \\
-                          --context=dir://${WORKSPACE} \\
-                          --destination=${env.IMAGE_FULL}
-                        """
-                    }
+                container('kaniko') {
+                    echo "🔨 Building & Pushing image with Pod Identity..."
+                    sh """
+                    /kaniko/executor \\
+                      --dockerfile=Dockerfile \\
+                      --context=dir://${WORKSPACE} \\
+                      --destination=${env.IMAGE_FULL}
+                    """
                 }
             }
             post {
                 success {
-                    // ✅ 성공 메시지에서 latest 부분 삭제
                     echo "✅ SUCCESS: Image pushed -> ${env.IMAGE_FULL}"
                 }
                 failure {
